@@ -6,11 +6,11 @@ A Hardhat starter template for building hybrid dApps on TAC with smart contracts
 
 ### Features
 
-- 📝 Solidity Contracts for TAC EVM Layer
-- 🌉 TAC Proxy for receiving messages from TON
-- 🔧 Hardhat Development Environment with full TAC support
-- 🧪 Testing Framework for contract verification
-- 🚀 Deployment Scripts for TAC testnet and mainnet
+- Solidity Contracts for TAC EVM Layer
+- TAC Proxy for receiving messages from TON
+- Hardhat Development Environment with full TAC support
+- Testing Framework for contract verification
+- Deployment Scripts for TAC testnet and mainnet
 
 ### Overview
 
@@ -38,18 +38,16 @@ PRIVATE_KEY=your_private_key_here
 Test and compile the contracts:
 
 ```
-npx hardhat test
-npx hardhat compile
+npm run test
+npm run compile
 ```
-
-
 
 ### Deployment
 
 Deploy the contracts to TAC testnet:
 
 ```
-npx hardhat run scripts/deploy.js --network tacTestnet
+npm run deploy:testnet
 ```
 
 The deployment script will output the addresses of your deployed contracts. Save these for use in your frontend application.
@@ -61,4 +59,3 @@ The deployment script will output the addresses of your deployed contracts. Save
 - MessageProxy.processMessage() is called with the message data
 - The proxy decodes the message and calls SimpleMessage.setMessage()
 - The message is stored in the contract and an event is emitted
-

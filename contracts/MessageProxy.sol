@@ -1,44 +1,77 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import { TacProxyV1 } from "tac-l2-ccl/contracts/proxies/TacProxyV1.sol";
-import { TokenAmount, OutMessageV1, TacHeaderV1 } from "tac-l2-ccl/contracts/L2/Structs.sol";
-import "./SimpleMessage.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { TacProxyV1 } from "@tonappchain/evm-ccl/contracts/proxies/TacProxyV1.sol";
+import { TokenAmount, NFTAmount, OutMessageV1, TacHeaderV1 } from "@tonappchain/evm-ccl/contracts/core/Structs.sol";
 
-contract MessageProxy is TacProxyV1 {
-    SimpleMessage public messageContract;
+interface ISimpleMessage {
+    function setMessage(string memory _message) external;
+    function getMessage() external view returns (string memory, address);
+}
+
+contract SimpleMessageProxy is TacProxyV1 {
+    ISimpleMessage public simpleMessage;
     
-    // Store the parameters sent from TON
-    struct MessageParams {
-        string message;
+    event CrossChainMessageReceived(
+        string message,
+        string originalCaller,
+        uint256 timestamp
+    );
+
+    constructor(
+        address _simpleMessageContract,
+        address _crossChainLayer
+    ) TacProxyV1(_crossChainLayer) {
+        simpleMessage = ISimpleMessage(_simpleMessageContract);
     }
-    
-    event MessageProcessed(string message, address sender);
-    
-    constructor(address _messageContract, address _crossChainLayer) 
-        TacProxyV1(_crossChainLayer) 
-    {
-        messageContract = SimpleMessage(_messageContract);
+
+    /**
+     * @dev Receives cross-chain messages from TON and forwards them to SimpleMessage
+     * This function signature is required: (bytes calldata, bytes calldata)
+     */
+    function forwardMessage(
+        bytes calldata tacHeader, 
+        bytes calldata arguments
+    ) external _onlyCrossChainLayer {
+        // Decode the TAC header to get TON user info
+        TacHeaderV1 memory header = _decodeTacHeader(tacHeader);
+        
+        // Decode the message from TON user
+        string memory message = abi.decode(arguments, (string));
+        
+        // Call the target contract
+        simpleMessage.setMessage(message);
+        
+        // Emit event for tracking
+        emit CrossChainMessageReceived(
+            message,
+            header.tvmCaller,
+            header.timestamp
+        );
+        
+        // Optional: Send confirmation back to TON
+        // (uncomment if you want to send a response back)
+        /*
+        OutMessageV1 memory response = OutMessageV1({
+            shardsKey: header.shardsKey,
+            tvmTarget: header.tvmCaller,
+            tvmPayload: "",
+            tvmProtocolFee: 0,  // Round trip - fees already paid
+            tvmExecutorFee: 0,  // Round trip - fees already paid
+            tvmValidExecutors: new string[](0), // Round trip - executors already set
+            toBridge: new TokenAmount[](0),
+            toBridgeNFT: new NFTAmount[](0)
+        });
+        
+        _sendMessageV1(response, 0);
+        */
     }
-    
-    // This function will be called from the TON side
-    function processMessage(bytes calldata tacHeader, bytes calldata arguments) 
-        external 
-        _onlyCrossChainLayer 
-    {
-        // 1. Decode the TAC header
-        _decodeTacHeader(tacHeader);
-        
-        // 2. Decode the message parameters
-        MessageParams memory params = abi.decode(arguments, (MessageParams));
-        
-        // 3. Call the message contract to store the message
-        messageContract.setMessage(params.message);
-        
-        // 4. Emit an event for tracking
-        emit MessageProcessed(params.message, msg.sender);
-        
-        // 5. Optional: Send a response back to TON if needed
-        // For this simple example, we're not sending anything back
+
+    /**
+     * @dev Get the current message from the target contract
+     */
+    function getCurrentMessage() external view returns (string memory, address) {
+        return simpleMessage.getMessage();
     }
 }
