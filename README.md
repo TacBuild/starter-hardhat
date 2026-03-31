@@ -2,22 +2,22 @@
 
 A Hardhat starter template for building hybrid dApps on TAC with smart contracts that can receive messages from TON.
 
-> This repository is part of the full starter application provided through the create-tac-app CLI tool.
+> This repository is part of the full starter application provided through the `create-tac-app`(https://www.npmjs.com/package/create-tac-app) CLI tool.
 
 ### Features
 
 - Solidity Contracts for TAC EVM Layer
 - TAC Proxy for receiving messages from TON
 - Hardhat Development Environment with full TAC support
-- Testing Framework for contract verification
 - Deployment Scripts for TAC testnet and mainnet
 
 ### Overview
 
-This starter includes two main contracts:
+This starter includes 3 main contracts:
 
 - SimpleMessage: A basic contract that stores messages and emits events
 - MessageProxy: A TAC proxy contract that receives cross-chain messages from TON and forwards them to SimpleMessage
+- MockToken: An ERC20 token contract that is minted by SimpleMessage and sent back to TON if the specific code block in `MessageProxy.sol` is uncommented
 
 ### Prerequisites
 
@@ -33,13 +33,12 @@ Before deploying, you need to configure your private key for TAC testnet. Create
 PRIVATE_KEY=your_private_key_here
 ```
 
-### Compilation & Testing
+### Compilation
 
 Test and compile the contracts:
 
 ```
-npm run test
-npm run compile
+npx hardhat compile
 ```
 
 ### Deployment
@@ -47,7 +46,7 @@ npm run compile
 Deploy the contracts to TAC testnet:
 
 ```
-npm run deploy:testnet
+npx hardhat run scripts/deploy.ts --network tacTestnet
 ```
 
 The deployment script will output the addresses of your deployed contracts. Save these for use in your frontend application.
@@ -59,3 +58,4 @@ The deployment script will output the addresses of your deployed contracts. Save
 - MessageProxy.processMessage() is called with the message data
 - The proxy decodes the message and calls SimpleMessage.setMessage()
 - The message is stored in the contract and an event is emitted
+- (Optional) if the specific code block in `MessageProxy.sol` is uncommented 1 MTK token is sent back to TON (TON-TAC-TON instead of TON-TAC transaction type)

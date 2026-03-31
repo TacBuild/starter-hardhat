@@ -6,13 +6,18 @@ import { TacProxyV1 } from "@tonappchain/evm-ccl/contracts/proxies/TacProxyV1.so
 import { TokenAmount, NFTAmount, OutMessageV1, TacHeaderV1 } from "@tonappchain/evm-ccl/contracts/core/Structs.sol";
 
 interface ISimpleMessage {
-    function setMessage(string memory _message) external;
+    function setMessage(string memory _message) external returns (address, uint256);
     function getMessage() external view returns (string memory, address);
+}
+
+interface IMintableERC20 {
+    function mint(address to, uint256 amount) external;
 }
 
 contract SimpleMessageProxy is TacProxyV1 {
     ISimpleMessage public simpleMessage;
-    
+    address public mockToken;
+
     event CrossChainMessageReceived(
         string message,
         string originalCaller,
@@ -21,9 +26,11 @@ contract SimpleMessageProxy is TacProxyV1 {
 
     constructor(
         address _simpleMessageContract,
-        address _crossChainLayer
+        address _crossChainLayer,
+        address _mockToken
     ) TacProxyV1(_crossChainLayer) {
         simpleMessage = ISimpleMessage(_simpleMessageContract);
+        mockToken = _mockToken;
     }
 
     /**
@@ -31,28 +38,35 @@ contract SimpleMessageProxy is TacProxyV1 {
      * This function signature is required: (bytes calldata, bytes calldata)
      */
     function forwardMessage(
-        bytes calldata tacHeader, 
+        bytes calldata tacHeader,
         bytes calldata arguments
     ) external _onlyCrossChainLayer {
         // Decode the TAC header to get TON user info
         TacHeaderV1 memory header = _decodeTacHeader(tacHeader);
-        
+
         // Decode the message from TON user
         string memory message = abi.decode(arguments, (string));
-        
-        // Call the target contract
-        simpleMessage.setMessage(message);
-        
+
+        // Call the target contract and get the minted token details
+        (address token, uint256 amount) = ISimpleMessage(address(simpleMessage)).setMessage(message);
+
         // Emit event for tracking
         emit CrossChainMessageReceived(
             message,
             header.tvmCaller,
             header.timestamp
         );
-        
+
         // Optional: Send confirmation back to TON
-        // (uncomment if you want to send a response back)
+        // (uncomment if you want to send a response back - TON-TAC-TON flow)
         /*
+        // 1. Approve CCL to bridge the tokens received from SimpleMessage
+        IERC20(token).approve(_getCrossChainLayerAddress(), amount);
+
+        // 2. Prepare token amounts for bridging
+        TokenAmount[] memory tokensToBridge = new TokenAmount[](1);
+        tokensToBridge[0] = TokenAmount(token, amount);
+
         OutMessageV1 memory response = OutMessageV1({
             shardsKey: header.shardsKey,
             tvmTarget: header.tvmCaller,
@@ -60,7 +74,7 @@ contract SimpleMessageProxy is TacProxyV1 {
             tvmProtocolFee: 0,  // Round trip - fees already paid
             tvmExecutorFee: 0,  // Round trip - fees already paid
             tvmValidExecutors: new string[](0), // Round trip - executors already set
-            toBridge: new TokenAmount[](0),
+            toBridge: tokensToBridge,
             toBridgeNFT: new NFTAmount[](0)
         });
         
