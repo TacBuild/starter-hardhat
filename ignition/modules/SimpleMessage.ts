@@ -4,32 +4,41 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 const MessageSystemModule = buildModule("MessageSystemModule", (m) => {
-  // 1. Deploy SimpleMessage contract first
-  const simpleMessage = m.contract("SimpleMessage");
+  // 1. Deploy MockToken first
+  const mockToken = m.contract("MockToken");
 
-  // 2. Get CrossChainLayer address based on network
+  // 2. Deploy SimpleMessage contract with MockToken address
+  const simpleMessage = m.contract("SimpleMessage", [mockToken]);
+
+  // 3. Get CrossChainLayer address based on network
   const crossChainLayerAddress = m.getParameter(
-    "crossChainLayerAddress",
-    getCrossChainLayerAddress()
+      "crossChainLayerAddress",
+      getCrossChainLayerAddress()
   );
 
-  // 3. Deploy MessageProxy contract with SimpleMessage and CrossChainLayer addresses
+  // 4. Deploy MessageProxy contract with SimpleMessage, CrossChainLayer and MockToken addresses
   const messageProxy = m.contract("SimpleMessageProxy", [
     simpleMessage,
     crossChainLayerAddress,
+    mockToken,
   ]);
 
+  // 5. Transfer ownership of MockToken to SimpleMessage so it can mint tokens
+  m.call(mockToken, "transferOwnership", [simpleMessage]);
+
   return {
+    mockToken,
     simpleMessage,
     messageProxy,
   };
 });
 
-function getCrossChainLayerAddress(): string {
+function getCrossChainLayerAddress(networkName?: string): string {
+  if (networkName === "tacMainnet") {
+    return "0x9fee01e948353E0897968A3ea955815aaA49f58d";
+  }
   // Default to TAC testnet CrossChainLayer address
   return "0x4f3b05a601B7103CF8Fc0aBB56d042e04f222ceE";
-
-  // For mainnet, use: 0x9fee01e948353E0897968A3ea955815aaA49f58d (https://docs.tac.build/build/tooling/contract-addresses)
 }
 
 export default MessageSystemModule;
