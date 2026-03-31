@@ -38,7 +38,7 @@ PRIVATE_KEY=your_private_key_here
 Test and compile the contracts:
 
 ```
-npm run compile
+npx hardhat compile
 ```
 
 ### Deployment

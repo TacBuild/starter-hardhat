@@ -3,12 +3,6 @@
   "version": "1.0.0",
   "description": "A Hardhat starter template for building hybrid dApps on TAC with smart contracts that can receive messages from TON.",
   "main": "index.js",
-  "scripts": {
-    "test": "hardhat test",
-    "compile": "hardhat compile",
-    "deploy:testnet": "hardhat ignition deploy ignition/modules/SimpleMessage.ts --network tacTestnet",
-    "deploy:mainnet": "hardhat ignition deploy ignition/modules/SimpleMessage.ts --network tacMainnet"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TacBuild/starter-hardhat.git"
